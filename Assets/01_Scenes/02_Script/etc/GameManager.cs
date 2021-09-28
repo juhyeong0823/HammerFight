@@ -23,7 +23,6 @@ public class GameManager : MonoBehaviour
         if (Instance == null)
         {
             Instance = this;
-
         }
         else
         {
@@ -32,14 +31,4 @@ public class GameManager : MonoBehaviour
     }
 
 
-
-    void Start()    
-    {
-
-    }
-
-    void Update()
-    {
-
-    }
 }
