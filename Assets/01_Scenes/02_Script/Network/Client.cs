@@ -9,15 +9,13 @@ public class Client : MonoBehaviour
 {
     public TcpClient tcp;
 
-    public Transform beforeTrm;
+    private Transform beforeTrm;
 
-    WaitForSeconds ws = new WaitForSeconds(0.2f);
+    WaitForSeconds ws = new WaitForSeconds(2f);
 
     private void Awake()
     {
-        StartCoroutine(ReadStart());   
-        
-        //StartCoroutine(SendTrm());
+        StartCoroutine(Communicate());
     }
 
     public void ConnectToServer()
@@ -30,36 +28,31 @@ public class Client : MonoBehaviour
         catch { Debug.Log("에러에러"); }
     }
 
-    IEnumerator ReadStart()
+    IEnumerator Communicate()
     {
-        while(true)
+        yield return ws;
+        if (tcp.GetStream() == null)
         {
-            yield return ws;
+            Debug.Log("아이 시팔");
+        }
+        else
+        {
             ReadStream();
-            
-        }
-    }
-
-    IEnumerator SendTrm()
-    {
-        while(true)
-        {
             beforeTrm = this.transform;
-            yield return ws;
-            string vectorData = (beforeTrm.position.x + "," + beforeTrm.position.y + "," + beforeTrm.position.z).ToString();
-            SendTransform(vectorData);//아주 지랄났네
+            string vectorData = "moveData" + (beforeTrm.position.x + "," + beforeTrm.position.y + "," + beforeTrm.position.z).ToString();
+            SendTransform(vectorData);
         }
     }
-    
 
     void ReadStream()
     {
-        
-            NetworkStream stream = tcp.GetStream(); // 여기서 오류나네
-            byte[] buffer = new byte[1024];
-            int readData = stream.Read(buffer, 0, buffer.Length);
-            string data = Encoding.UTF8.GetString(buffer, 0, readData);
-            Debug.Log(data);
+        NetworkStream stream = tcp.GetStream();
+        Debug.Log("read");
+        byte[] buffer = new byte[1024];
+        int readData = stream.Read(buffer, 0, buffer.Length);
+        Debug.Log("streamError");
+        string data = Encoding.UTF8.GetString(buffer, 0, readData);
+        Debug.Log(data);
     }
 
     void SendString(string sendStr)

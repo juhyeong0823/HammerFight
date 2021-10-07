@@ -40,6 +40,8 @@ public class UIManager : MonoBehaviour
     public InputField ipInput;
     public GameObject playerPrefab;
 
+    private GameObject createdClient; // 만든놈 오류뜨면 죽여버리게
+
     private void Start()
     {
         newClientBtn.onClick.AddListener(() =>
@@ -51,12 +53,24 @@ public class UIManager : MonoBehaviour
         });
     }
 
+
+
     void CreateClient(string name/*,string ip*/)
     {
-        GameObject obj = Instantiate(playerPrefab, transform.position, Quaternion.identity); // 클라이언트 달린놈 만들고
-        obj.name = name; // 이름 설정해서
-        Client objClient = obj.GetComponent<Client>(); // 그시키 클라이언트 받아오고?
-        objClient.tcp = new TcpClient("127.0.0.1", 13000); // 아이피랑 포트 설정해서
-        objClient.ConnectToServer(); // 서버 연결
+        try
+        {
+            createdClient = Instantiate(playerPrefab, transform.position, Quaternion.identity); // 클라이언트 달린놈 만들고
+            createdClient.name = name; // 이름 설정해서
+            Client objClient = createdClient.GetComponent<Client>(); // 그시키 클라이언트 받아오고?
+            objClient.tcp = new TcpClient("127.0.0.1", 13000); // 아이피랑 포트 설정해서
+            objClient.ConnectToServer(); // 서버 연결
+        }
+        catch
+        {
+            Debug.Log("안돼 돌아가");
+            Destroy(createdClient);
+            createdClient = null;
+        }
+
     }
 }

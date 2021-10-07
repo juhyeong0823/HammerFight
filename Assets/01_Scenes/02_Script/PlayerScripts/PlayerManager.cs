@@ -10,12 +10,10 @@ public class PlayerManager : MonoBehaviour
     [SerializeField] public float speed = 10f;
 
     PlayerInput playerInput;
-
-
+    public GameObject weapon;
     void Start()
     {
         anim = GetComponent<Animator>();
-
         playerInput = GetComponent<PlayerInput>();
     }
 
@@ -33,9 +31,10 @@ public class PlayerManager : MonoBehaviour
     void AttackInput(bool isIdle) // Idle상태가 아니면 리턴 , 키 입력시 애니메이션 시작, 애니메이션 끝나면 enum을 바꾸자
     {
         if (!isIdle) return;
-        
-        if(Input.GetKeyDown(KeyCode.A) && !anim.GetBool("IsAttack")) {
 
+        
+
+        if (Input.GetKeyDown(KeyCode.A) && !anim.GetBool("IsAttack")) {
             SetState(PlayerInput.PlayerCondition.Attack);
             StartCoroutine(WaitAnimEnd("IsAttack",true));
         }
@@ -54,7 +53,4 @@ public class PlayerManager : MonoBehaviour
         yield return new WaitForSeconds(45/60); // 이거는 1초에 60프레임을 돌리니까 60분의 프레임 수를 나눠주면 대충 시간이 나옴
         anim.SetBool(conditionName, !animCondition);
     }
-
-
-
 }
