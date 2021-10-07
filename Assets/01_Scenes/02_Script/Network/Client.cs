@@ -30,29 +30,34 @@ public class Client : MonoBehaviour
 
     IEnumerator Communicate()
     {
-        yield return ws;
-        if (tcp.GetStream() == null)
+        while (true)
         {
-            Debug.Log("æ∆¿Ã Ω√∆»");
-        }
-        else
-        {
-            ReadStream();
-            beforeTrm = this.transform;
-            string vectorData = "moveData" + (beforeTrm.position.x + "," + beforeTrm.position.y + "," + beforeTrm.position.z).ToString();
-            SendTransform(vectorData);
-        }
+            yield return ws;
+            if (tcp.GetStream() == null)
+            {
+                Debug.Log("æ∆¿Ã Ω√∆»");
+            }
+            else
+            {
+                ReadStream();
+                beforeTrm = this.transform;
+                string vectorData = $"#moveData#/x:{beforeTrm.position.x.ToString("0.0")}, y:{beforeTrm.position.y.ToString("0.0")}, z:{beforeTrm.position.z.ToString("0.0")};";
+                SendTransform(vectorData);
+            }
+        }   
+
     }
 
     void ReadStream()
     {
         NetworkStream stream = tcp.GetStream();
-        Debug.Log("read");
         byte[] buffer = new byte[1024];
-        int readData = stream.Read(buffer, 0, buffer.Length);
-        Debug.Log("streamError");
-        string data = Encoding.UTF8.GetString(buffer, 0, readData);
-        Debug.Log(data);
+        if (stream.DataAvailable)
+        {
+            int readData = stream.Read(buffer, 0, buffer.Length);
+            string data = Encoding.UTF8.GetString(buffer, 0, readData);
+            Debug.Log(data);
+        }
     }
 
     void SendString(string sendStr)
