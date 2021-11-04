@@ -19,6 +19,8 @@ public class PlayerManager : MonoBehaviour
 
     void Update()
     {
+        if (this.gameObject != UIManager.instance.createdClient) return;
+
         AttackInput(true);
         Move();
     }
@@ -31,9 +33,6 @@ public class PlayerManager : MonoBehaviour
     void AttackInput(bool isIdle) // Idle상태가 아니면 리턴 , 키 입력시 애니메이션 시작, 애니메이션 끝나면 enum을 바꾸자
     {
         if (!isIdle) return;
-
-        
-
         if (Input.GetKeyDown(KeyCode.A) && !anim.GetBool("IsAttack")) {
             SetState(PlayerInput.PlayerCondition.Attack);
             StartCoroutine(WaitAnimEnd("IsAttack",true));
