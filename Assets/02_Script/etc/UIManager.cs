@@ -5,8 +5,7 @@ using UnityEngine.UI;
 using System.Net.Sockets;
 public class UIManager : MonoBehaviour
 {
-    //싱글톤
-    #region
+    #region 싱글톤
     private static UIManager Instance = null;
 
     public static UIManager instance
@@ -34,9 +33,6 @@ public class UIManager : MonoBehaviour
 
     #endregion
 
-
-    public bool isThereMainChar = false;
-
     public Button newClientBtn;
     public Button quitBtn;
 
@@ -48,22 +44,25 @@ public class UIManager : MonoBehaviour
     {
         newClientBtn.onClick.AddListener(() =>
         {
-            string name = nameInput.text;
-            createdClient = CreateClient(name);
-            //this.gameObject.SetActive(false); // 클라 추가 패널로 나중에 바꾸고
+            if (nameInput.text.Length > 0 || nameInput.text.Contains(" "))
+            {
+                string name = nameInput.text;
+                CreateClient(name);
+            }
+            else 
+                Debug.Log("닉네임을 넣어야 합니다아");
         });
         quitBtn.onClick.AddListener(() => OnQuit());
     }
 
-    public GameObject CreateClient(string name)
+    public void CreateClient(string name)
     {
         GameObject obj = Instantiate(playerPrefab, transform.position, Quaternion.identity); // 클라이언트 달린놈 만들고
         obj.name = name; // 이름 설정해서
         Client objClient = obj.GetComponent<Client>(); // 그시키 클라이언트 받아오고?
         objClient.tcp = new TcpClient("127.0.0.1", 13000); // 아이피랑 포트 설정해서
         objClient.ConnectToServer(); // 서버 연결
-
-        return obj;
+        createdClient = obj;
     }
 
     private void OnApplicationQuit()

@@ -6,37 +6,109 @@ using System.Text;
 using System.Collections;
 using System;
 using System.Collections.Generic;
+using System.Threading;
 
 public class Client : MonoBehaviour
 {
-    public TcpClient tcp;
+    #region 싱글톤
+    private static Client Instance = null;
 
+    public static Client instance
+    {
+        get
+        {
+            if (Instance == null)
+            {
+                return null;
+            }
+            return Instance;
+        }
+    }
+
+    void Awake()
+    {
+        if (Instance == null)
+        {
+            Instance = this;
+        }
+        else
+        {
+            Destroy(this.gameObject);
+        }
+    }
+    #endregion
+
+    public TcpClient tcp;
     public bool isThreadAlived = true;
 
-    const string QUIT_COMMAND = "Quit#";
+    public Dictionary<string, Vector3> clientsPosDic = new Dictionary<string, Vector3>();
+    public Dictionary<string, GameObject> clients = new Dictionary<string, GameObject>();
+    WaitForSeconds ws = new WaitForSeconds(0.1f);
 
-    WaitForSeconds ws = new WaitForSeconds(1f);
+    const string QUIT_COMMAND = "Quit#;";
+    const string MOVE_COMMAND = "Move#";
+    const string ATTACK_COMMAND = "Attack#";
+    const string HITTED_COMMAND = "Hitted#";
 
-    private void Awake()
+    List<Action> actionList = new List<Action>();
+
+    private void Update()
     {
-        if(!UIManager.instance.isThereMainChar) // 메인 캐릭터 없으면 쓰레드 시작 아니면 애네는 서버로부터 데이터받아서 하나의 스크립트가 관리할거임
-            StartCoroutine(Communicate());
+        int count = actionList.Count;
+
+        for(int i =0; i< count; i++)
+        {
+            actionList[0]();
+            actionList.RemoveAt(0);
+        }
+
+        foreach (string clientName in clientsPosDic.Keys)
+        {
+            clients[clientName].transform.position = Vector3.Lerp(clients[clientName].transform.position, clientsPosDic[clientName], Time.deltaTime);
+        }
     }
 
     public void ConnectToServer()
     {
+        string readData = "";
         SendData(this.name);
-        ReadStream();
-        Debug.Log("ConnectToServer complete");
+        while (true)
+        {
+            readData = ReadData();
+            if (readData != null) break;
+        }
+        if (readData.Contains("Connect#"))// 데이터 널이면
+        {
+            Debug.Log("연결");
+            StartCoroutine(Communicate());
+        }
+        else if (readData.Contains("DuplicateName#"))
+        {
+            Debug.Log("연결 실패");
+            Destroy(this.gameObject);
+            UIManager.instance.createdClient = null;
+        }
     }
 
-    IEnumerator Communicate()
+    public void AttackSend(string animName) // 공격 애니메이션 돌리라고.
+    {
+        string sendData = $"{ATTACK_COMMAND}{this.name},{animName};";
+        SendData(sendData);
+    }
+
+    public void HittedSend(string hittedPlayerName, Vector3 dir) // 내 망치가 누군가에게 닿으면, 그 사람 닉네임이랑 날아갈 방향 보내주기
+    {
+        string sendData = $"{HITTED_COMMAND}{hittedPlayerName},{dir.x},{dir.y},{dir.z};";
+        SendData(sendData);
+    }
+
+    public IEnumerator Communicate()
     {
         while (isThreadAlived)
         {
             yield return ws;
 
-            string sendData = $"Move#{Math.Round(transform.position.x, 2)},{Math.Round(transform.position.y, 2)},{Math.Round(transform.position.z, 2)};";
+            string sendData = $"{MOVE_COMMAND}{Math.Round(transform.position.x, 2)},{Math.Round(transform.position.y, 2)},{Math.Round(transform.position.z, 2)};";
             SendData(sendData);
             ReadStream();
         }
@@ -45,61 +117,93 @@ public class Client : MonoBehaviour
     void ReadStream()
     {
         string readData = ReadData(); // 읽을게 없거나 읽을 수 없으면 null이 반한됌
-
-        // 테스트 코드
         if (readData == null) return;
-
-        try
+        string remain = readData;
+        do
         {
-            int idx1 = readData.IndexOf("#");
-            string command = readData.Substring(0, idx1);
+            int idx1 = remain.IndexOf("#");
+            int idx2 = remain.IndexOf(";");
+            string useData = remain.Substring(0, idx2); // 이용할 데이터 가져오기
+            string cmdType = useData.Substring(0, idx1);
+            string command = useData.Substring(idx1 + 1, useData.Length - idx1 - 1);  //#다음부터 다 가져오기
+            remain = remain.Substring(idx2 + 1, remain.Length - idx2 - 1);
+            string[] data = command.Split(',');
 
-            string remain = readData.Substring(idx1 + 1, readData.Length- idx1-1); //#다음부터 다 가져오기
 
-            Debug.Log(command);
-            switch (command)
+            switch (cmdType)
             {
                 case "Move":
-                    break;
-                case "Setting":
-                    do
                     {
-                        int idx2 = remain.IndexOf(";");
-                        string posDataString = remain.Substring(0, idx2);
-                        string [] datas = posDataString.Split(',');
+                        lock (actionList)
+                        {
+                            actionList.Add(() =>
+                            {
+                                clientsPosDic[data[0]] = new Vector3(float.Parse(data[1]), float.Parse(data[2]), float.Parse(data[3]));
+                            });
+                        }
+                        break;
+                    }
 
-                        Debug.Log(remain);
-                        remain = remain.Substring(idx2 + 1, remain.Length - idx2 - 1); // 맨 앞 친구 다음 데이터 끝까지
-                        Debug.Log(remain);
+                case "Setting":
+                    {
+                        lock (actionList)
+                        {
+                            actionList.Add(() =>
+                            {
+                                Vector3 objPos_setting = new Vector3(float.Parse(data[1]), float.Parse(data[2]), float.Parse(data[3]));
+                                GameManager.instance.CreateOtherPlayer(data[0], objPos_setting);
+                            });
+                        }
+                        break;
+                    }
 
-                        GameObject obj = UIManager.instance.CreateClient(datas[0]);
-                        Vector3 objPos = new Vector3(float.Parse(datas[1]), float.Parse(datas[2]), float.Parse(datas[3]));
-                        obj.transform.position = objPos;
+                case "Attack":
+                    {
+                        lock (actionList)
+                        {
+                            actionList.Add(() =>
+                            {
+                                if (data[0] == this.name) return;
+                                Player obj = GameObject.Find(data[0]).GetComponent<Player>();
+                                obj.UpperSwing();
+                            });
+                        }
+                        break;
+                    }
 
-                    } while (remain.Length > 0);
-                    break;
-
-                default:
-                    Debug.Log("readData : " + readData);
-                    break;
+                case "Hitted":
+                    {
+                        lock (actionList)
+                        {
+                            actionList.Add(() =>
+                            {
+                                Vector3 dir = new Vector3(float.Parse(data[0]), float.Parse(data[1]), float.Parse(data[2]));
+                                Hitted(dir);
+                            });
+                        }
+                        break;
+                    }
             }
-        }
-        catch 
-        {
-            Debug.Log("ReadStream Error");
-        }
+        } while (remain.Length > 0);
     }
 
+    void Hitted(Vector3 dir)
+    {
+        GetComponent<Player>().Hitted();
+        GetComponent<Rigidbody>().velocity = dir; // 나한테 있는 리짓바디에 접근을 못함
+        Debug.Log($"내가 날아갈 방향 : {dir}");
+    }
+
+    #region
     void SendData(string sendData)
     {
         try
         {
             NetworkStream stream = tcp.GetStream(); // 여기서 오류나네
-            byte[] buffer = new byte[1024];
-            buffer = Encoding.UTF8.GetBytes(sendData);
+            byte[] buffer = Encoding.UTF8.GetBytes(sendData);
+
             stream.Write(buffer, 0, sendData.Length);
             stream.Flush();
-            Debug.Log("Send : " + sendData);
         }
         catch
         {
@@ -115,8 +219,9 @@ public class Client : MonoBehaviour
             if (stream.DataAvailable)
             {
                 byte[] buffer = new byte[1024];
-                int readData = stream.Read(buffer, 0, buffer.Length);
-                return Encoding.UTF8.GetString(buffer, 0, readData);
+                int bufferLength = stream.Read(buffer, 0, buffer.Length);
+                string readData = Encoding.UTF8.GetString(buffer, 0, bufferLength);
+                return readData;
             }
         }
         catch
@@ -139,7 +244,7 @@ public class Client : MonoBehaviour
         isThreadAlived = false;  // 쓰레드 끝내기
 
         UIManager.instance.createdClient = null; // 메인캐릭터 삭제
-        UIManager.instance.isThereMainChar = false; // 메인캐릭터 없다고 알려주고
         Destroy(this.gameObject); // 중에 그냥 연결만 끊고 다시 초기화하는 것도 생각해줘야함
     }
+    #endregion
 }
