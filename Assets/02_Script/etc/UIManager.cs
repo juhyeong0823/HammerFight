@@ -33,6 +33,8 @@ public class UIManager : MonoBehaviour
 
     #endregion
 
+    [SerializeField] private Camera startCamera;
+
     public Button newClientBtn;
     public Button quitBtn;
 
@@ -48,6 +50,7 @@ public class UIManager : MonoBehaviour
             {
                 string name = nameInput.text;
                 CreateClient(name);
+                newClientBtn.gameObject.SetActive(false);
             }
             else 
                 Debug.Log("닉네임을 넣어야 합니다아");
@@ -63,6 +66,7 @@ public class UIManager : MonoBehaviour
         objClient.tcp = new TcpClient("127.0.0.1", 13000); // 아이피랑 포트 설정해서
         objClient.ConnectToServer(); // 서버 연결
         createdClient = obj;
+        startCamera.gameObject.SetActive(false);
     }
 
     private void OnApplicationQuit()
@@ -73,6 +77,8 @@ public class UIManager : MonoBehaviour
     void OnQuit()
     {
         if (createdClient != null)  createdClient.GetComponent<Client>().DisConnectWithServer();
+        startCamera.gameObject.SetActive(true);
+        newClientBtn.gameObject.SetActive(true);
         //else Debug.LogError("메인캐릭터 없대");
     }
 }

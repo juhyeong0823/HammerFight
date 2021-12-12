@@ -42,11 +42,13 @@ public class Client : MonoBehaviour
     public bool isThreadAlived = true;
 
     public Dictionary<string, Vector3> clientsPosDic = new Dictionary<string, Vector3>();
-    public Dictionary<string, GameObject> clients = new Dictionary<string, GameObject>();
+    public Dictionary<string, Vector3> clientsRotDic = new Dictionary<string, Vector3>();
+    public Dictionary<string, GameObject> otherClients = new Dictionary<string, GameObject>();
     WaitForSeconds ws = new WaitForSeconds(0.1f);
 
     const string QUIT_COMMAND = "Quit#;";
     const string MOVE_COMMAND = "Move#";
+    const string ROTATE_COMMAND = "Rotate#";
     const string ATTACK_COMMAND = "Attack#";
     const string HITTED_COMMAND = "Hitted#";
 
@@ -56,15 +58,21 @@ public class Client : MonoBehaviour
     {
         int count = actionList.Count;
 
-        for(int i =0; i< count; i++)
+        for (int i = 0; i < count; i++)
         {
             actionList[0]();
             actionList.RemoveAt(0);
         }
 
-        foreach (string clientName in clientsPosDic.Keys)
+        Debug.Log("otherClients  Count : " + otherClients.Count);
+        Debug.Log("clientsPosDic Count : " + clientsPosDic.Count);
+        Debug.Log("clientsRotDic Count : " + clientsRotDic.Count);
+
+        foreach(string clientName in otherClients.Keys)
         {
-            clients[clientName].transform.position = Vector3.Lerp(clients[clientName].transform.position, clientsPosDic[clientName], Time.deltaTime);
+            Debug.Log("½ÇÇà");
+            otherClients[clientName].transform.position = Vector3.Lerp(otherClients[clientName].transform.position, clientsPosDic[clientName], 0.1f);
+            otherClients[clientName].transform.rotation = Quaternion.Euler(clientsRotDic[clientName]);
         }
     }
 
@@ -102,14 +110,28 @@ public class Client : MonoBehaviour
         SendData(sendData);
     }
 
+    public void MoveSend()
+    {
+        string posData = $"{MOVE_COMMAND}{Math.Round(transform.position.x, 2)},{Math.Round(transform.position.y, 2)},{Math.Round(transform.position.z, 2)};";
+        Debug.Log("posData : " + posData);
+        SendData(posData);
+    }
+
+    public void RotateSend()
+    {
+        string rotData = $"{ROTATE_COMMAND}{Math.Round(transform.eulerAngles.x, 2)},{Math.Round(transform.eulerAngles.y, 2)},{Math.Round(transform.eulerAngles.z, 2)};";
+        Debug.Log("rotData : " + rotData);
+        SendData(rotData);
+    }
+
     public IEnumerator Communicate()
     {
         while (isThreadAlived)
         {
             yield return ws;
 
-            string sendData = $"{MOVE_COMMAND}{Math.Round(transform.position.x, 2)},{Math.Round(transform.position.y, 2)},{Math.Round(transform.position.z, 2)};";
-            SendData(sendData);
+            MoveSend();
+            RotateSend();
             ReadStream();
         }
     }
@@ -129,60 +151,63 @@ public class Client : MonoBehaviour
             remain = remain.Substring(idx2 + 1, remain.Length - idx2 - 1);
             string[] data = command.Split(',');
 
-
+            Debug.Log(cmdType);
             switch (cmdType)
             {
                 case "Move":
+                    lock (actionList)
                     {
-                        lock (actionList)
+                        actionList.Add(() =>
                         {
-                            actionList.Add(() =>
-                            {
-                                clientsPosDic[data[0]] = new Vector3(float.Parse(data[1]), float.Parse(data[2]), float.Parse(data[3]));
-                            });
-                        }
-                        break;
+                            clientsPosDic[data[0]] = new Vector3(float.Parse(data[1]), float.Parse(data[2]), float.Parse(data[3]));
+                        });
                     }
+                    break;
+
+                case "Rotate":
+                    lock (actionList)
+                    {
+                        actionList.Add(() =>
+                        {
+                            clientsRotDic[data[0]] = new Vector3(float.Parse(data[1]), float.Parse(data[2]), float.Parse(data[3]));
+                        });
+                    }
+                    break;
 
                 case "Setting":
+                    lock (actionList)
                     {
-                        lock (actionList)
+                        actionList.Add(() =>
                         {
-                            actionList.Add(() =>
-                            {
-                                Vector3 objPos_setting = new Vector3(float.Parse(data[1]), float.Parse(data[2]), float.Parse(data[3]));
-                                GameManager.instance.CreateOtherPlayer(data[0], objPos_setting);
-                            });
-                        }
-                        break;
+                            Vector3 objPos_setting = new Vector3(float.Parse(data[1]), float.Parse(data[2]), float.Parse(data[3]));
+                            Vector3 objRot_setting = new Vector3(float.Parse(data[4]), float.Parse(data[5]), float.Parse(data[6]));
+                            GameManager.instance.CreateOtherPlayer(data[0], objPos_setting, objRot_setting);
+                        });
                     }
+                    break;
 
                 case "Attack":
+                    lock (actionList)
                     {
-                        lock (actionList)
+                        actionList.Add(() =>
                         {
-                            actionList.Add(() =>
-                            {
-                                if (data[0] == this.name) return;
-                                Player obj = GameObject.Find(data[0]).GetComponent<Player>();
-                                obj.UpperSwing();
-                            });
-                        }
-                        break;
+                            if (data[0] == this.name) return;
+                            Player obj = GameObject.Find(data[0]).GetComponent<Player>();
+                            obj.UpperSwing();
+                        });
                     }
+                    break;
 
                 case "Hitted":
+                    lock (actionList)
                     {
-                        lock (actionList)
+                        actionList.Add(() =>
                         {
-                            actionList.Add(() =>
-                            {
-                                Vector3 dir = new Vector3(float.Parse(data[0]), float.Parse(data[1]), float.Parse(data[2]));
-                                Hitted(dir);
-                            });
-                        }
-                        break;
+                            Vector3 dir = new Vector3(float.Parse(data[0]), float.Parse(data[1]), float.Parse(data[2]));
+                            Hitted(dir);
+                        });
                     }
+                    break;
             }
         } while (remain.Length > 0);
     }
@@ -218,7 +243,7 @@ public class Client : MonoBehaviour
             NetworkStream stream = tcp.GetStream();
             if (stream.DataAvailable)
             {
-                byte[] buffer = new byte[1024];
+                byte[] buffer = new byte[2048];
                 int bufferLength = stream.Read(buffer, 0, buffer.Length);
                 string readData = Encoding.UTF8.GetString(buffer, 0, bufferLength);
                 return readData;

@@ -8,11 +8,11 @@ public class Player : MonoBehaviour
     public GameObject weapon;
 
     PlayerInput playerInput;
-    [HideInInspector]
-    public Animator weaponAnim;
-    Rigidbody rigid;
+    [HideInInspector]public Animator weaponAnim;
+    [HideInInspector]public Rigidbody rigid;
+    public float jumpPower = 10;
 
-
+    bool canJump = true;
     bool isHitted = false;
 
     void Start()
@@ -35,6 +35,7 @@ public class Player : MonoBehaviour
         if (this.gameObject != UIManager.instance.createdClient || isHitted) return;
         AttackInput();
         Move();
+        Jump();
     }
 
     public void Hitted()
@@ -49,12 +50,19 @@ public class Player : MonoBehaviour
         isHitted = false;
     }
 
+    void Jump()
+    {
+        if (Input.GetKeyDown(KeyCode.Space) && canJump)
+        {
+            rigid.velocity += new Vector3(0, jumpPower, 0);
+            canJump = false;
+        }
+    }
+
     void Move()
     {
         if (isHitted) return;
-
-        //rigid.velocity = new Vector3(playerInput.moveX, rigid.velocity.y , playerInput.moveZ) * speed;
-        rigid.velocity = playerInput.movedir * speed;
+        rigid.velocity = new Vector3(playerInput.movedir.x * speed, rigid.velocity.y, playerInput.movedir.z * speed);
     }
 
     void AttackInput()
@@ -78,5 +86,9 @@ public class Player : MonoBehaviour
         yield return new WaitForSeconds(GameManager.instance.GetAnimLength(weaponAnim, animName));
         weaponAnim.SetInteger("AttackType", 0);
     }
-    
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        canJump = true;
+    }
 }

@@ -32,18 +32,18 @@ public class GameManager : MonoBehaviour
     }
     #endregion
 
-    public List<GameObject> otherPlayers = new List<GameObject>();
     public GameObject otherPlayerPrefab;
 
     public float otherPlayerSpeed;
 
-    public GameObject CreateOtherPlayer(string _name, Vector3 pos)
+    public void CreateOtherPlayer(string _name, Vector3 pos, Vector3 rot)
     {
-        GameObject obj = Instantiate(otherPlayerPrefab, pos, Quaternion.identity);
+        Debug.Log("CreateOtherPlayer");
+        GameObject obj = Instantiate(otherPlayerPrefab, pos, Quaternion.Euler(rot));
         obj.name = _name; // 이름 설정해서
+        Client.instance.otherClients.Add(obj.name, obj);
         Client.instance.clientsPosDic.Add(obj.name, pos);
-        Client.instance.clients.Add(obj.name, obj);
-        return obj;
+        Client.instance.clientsRotDic.Add(obj.name, rot);
     }
 
 

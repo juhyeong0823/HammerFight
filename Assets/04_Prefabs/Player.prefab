@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 7354698054374100647}
   - component: {fileID: 5696782647652503660}
   - component: {fileID: 8360562801359936259}
+  - component: {fileID: 9108617213027595459}
   m_Layer: 7
   m_Name: Camera
   m_TagString: Untagged
@@ -83,6 +84,19 @@ AudioListener:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 163690488863829083}
   m_Enabled: 1
+--- !u!114 &9108617213027595459
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 163690488863829083}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b3dca10f1435fcb4b9c85dc85676a97e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  player: {fileID: 0}
 --- !u!1 &4332617179067801362
 GameObject:
   m_ObjectHideFlags: 0
@@ -434,12 +448,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a5114072d939ef244b8e4a641f116d91, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  bTryRun: 0
-  upRun: 0
   rotateSpeed: 4
-  runSpeed: 2
   myCam: {fileID: 0}
   movedir: {x: 0, y: 0, z: 0}
+  p: {fileID: 0}
 --- !u!114 &4332617179482834415
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -455,6 +467,8 @@ MonoBehaviour:
   speed: 4
   weapon: {fileID: 4332617181016307783}
   weaponAnim: {fileID: 0}
+  rigid: {fileID: 0}
+  jumpPower: 10
 --- !u!114 &4332617179482834414
 MonoBehaviour:
   m_ObjectHideFlags: 0
