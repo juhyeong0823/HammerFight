@@ -5,7 +5,7 @@ public class PlayerInput : MonoBehaviour
     public float rotateSpeed = 3f;
     
     public Vector3 movedir;
-    public Player p;
+    Player p;
 
     private void Start()
     {
@@ -45,9 +45,6 @@ public class PlayerInput : MonoBehaviour
 
     void Rotate()
     {
-        if (Input.GetMouseButton(1))
-        {
-            transform.Rotate(0f, Input.GetAxis("Mouse X") * rotateSpeed, 0f, Space.World);
-        }
+        transform.Rotate(0f, Input.GetAxis("Mouse X") * rotateSpeed, 0f, Space.World);
     }
 }

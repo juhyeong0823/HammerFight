@@ -44,11 +44,11 @@ public class Client : MonoBehaviour
     public Dictionary<string, Vector3> clientsPosDic = new Dictionary<string, Vector3>();
     public Dictionary<string, Vector3> clientsRotDic = new Dictionary<string, Vector3>();
     public Dictionary<string, GameObject> otherClients = new Dictionary<string, GameObject>();
-    WaitForSeconds ws = new WaitForSeconds(0.1f);
+    WaitForSeconds ws = new WaitForSeconds(0.2f);
 
     const string QUIT_COMMAND = "Quit#;";
     const string MOVE_COMMAND = "Move#";
-    const string ROTATE_COMMAND = "Rotate#";
+    const string ROTATE_COMMAND = "Rot#";
     const string ATTACK_COMMAND = "Attack#";
     const string HITTED_COMMAND = "Hitted#";
 
@@ -64,14 +64,11 @@ public class Client : MonoBehaviour
             actionList.RemoveAt(0);
         }
 
-        Debug.Log("otherClients  Count : " + otherClients.Count);
-        Debug.Log("clientsPosDic Count : " + clientsPosDic.Count);
-        Debug.Log("clientsRotDic Count : " + clientsRotDic.Count);
-
         foreach(string clientName in otherClients.Keys)
         {
             Debug.Log("실행");
             otherClients[clientName].transform.position = Vector3.Lerp(otherClients[clientName].transform.position, clientsPosDic[clientName], 0.1f);
+            Debug.Log(clientsRotDic[clientName]);
             otherClients[clientName].transform.rotation = Quaternion.Euler(clientsRotDic[clientName]);
         }
     }
@@ -113,14 +110,12 @@ public class Client : MonoBehaviour
     public void MoveSend()
     {
         string posData = $"{MOVE_COMMAND}{Math.Round(transform.position.x, 2)},{Math.Round(transform.position.y, 2)},{Math.Round(transform.position.z, 2)};";
-        Debug.Log("posData : " + posData);
         SendData(posData);
     }
 
     public void RotateSend()
     {
-        string rotData = $"{ROTATE_COMMAND}{Math.Round(transform.eulerAngles.x, 2)},{Math.Round(transform.eulerAngles.y, 2)},{Math.Round(transform.eulerAngles.z, 2)};";
-        Debug.Log("rotData : " + rotData);
+        string rotData = $"{ROTATE_COMMAND}{(int)(transform.eulerAngles.x)},{(int)(transform.eulerAngles.y)},{(int)(transform.eulerAngles.z)};";
         SendData(rotData);
     }
 
@@ -130,8 +125,8 @@ public class Client : MonoBehaviour
         {
             yield return ws;
 
-            MoveSend();
             RotateSend();
+            MoveSend();
             ReadStream();
         }
     }
@@ -151,7 +146,7 @@ public class Client : MonoBehaviour
             remain = remain.Substring(idx2 + 1, remain.Length - idx2 - 1);
             string[] data = command.Split(',');
 
-            Debug.Log(cmdType);
+            //Debug.Log(cmdType);
             switch (cmdType)
             {
                 case "Move":
@@ -164,7 +159,7 @@ public class Client : MonoBehaviour
                     }
                     break;
 
-                case "Rotate":
+                case "Rot":
                     lock (actionList)
                     {
                         actionList.Add(() =>
@@ -180,8 +175,7 @@ public class Client : MonoBehaviour
                         actionList.Add(() =>
                         {
                             Vector3 objPos_setting = new Vector3(float.Parse(data[1]), float.Parse(data[2]), float.Parse(data[3]));
-                            Vector3 objRot_setting = new Vector3(float.Parse(data[4]), float.Parse(data[5]), float.Parse(data[6]));
-                            GameManager.instance.CreateOtherPlayer(data[0], objPos_setting, objRot_setting);
+                            GameManager.instance.CreateOtherPlayer(data[0], objPos_setting, Vector3.zero);
                         });
                     }
                     break;
@@ -193,7 +187,7 @@ public class Client : MonoBehaviour
                         {
                             if (data[0] == this.name) return;
                             Player obj = GameObject.Find(data[0]).GetComponent<Player>();
-                            obj.UpperSwing();
+                            obj.PlayAnim(obj.weaponAnim, data[1]);
                         });
                     }
                     break;
@@ -208,6 +202,23 @@ public class Client : MonoBehaviour
                         });
                     }
                     break;
+
+                case "Remove":
+                    lock (actionList)
+                    {
+                        actionList.Add(() =>
+                        {
+                            GameObject destroyObj = GameObject.Find(data[0]);
+                            GameManager.instance.PlayDeadFx(destroyObj.transform.position);
+                            Client.instance.otherClients. Remove(destroyObj.name);
+                            Client.instance.clientsPosDic.Remove(destroyObj.name);
+                            Client.instance.clientsRotDic.Remove(destroyObj.name);
+                            Destroy(destroyObj);
+                        });
+                    }
+                    break;
+                default:
+                    break;
             }
         } while (remain.Length > 0);
     }
@@ -216,7 +227,6 @@ public class Client : MonoBehaviour
     {
         GetComponent<Player>().Hitted();
         GetComponent<Rigidbody>().velocity = dir; // 나한테 있는 리짓바디에 접근을 못함
-        Debug.Log($"내가 날아갈 방향 : {dir}");
     }
 
     #region

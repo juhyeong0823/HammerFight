@@ -32,20 +32,25 @@ public class GameManager : MonoBehaviour
     }
     #endregion
 
-    public GameObject otherPlayerPrefab;
+    public Transform playerParentTrm;
 
-    public float otherPlayerSpeed;
+    public GameObject otherPlayerPrefab;
+    public GameObject particle;
 
     public void CreateOtherPlayer(string _name, Vector3 pos, Vector3 rot)
     {
         Debug.Log("CreateOtherPlayer");
-        GameObject obj = Instantiate(otherPlayerPrefab, pos, Quaternion.Euler(rot));
+        GameObject obj = Instantiate(otherPlayerPrefab, pos, Quaternion.Euler(rot), playerParentTrm);
         obj.name = _name; // 이름 설정해서
         Client.instance.otherClients.Add(obj.name, obj);
         Client.instance.clientsPosDic.Add(obj.name, pos);
         Client.instance.clientsRotDic.Add(obj.name, rot);
     }
 
+    public void PlayDeadFx(Vector3 pos)
+    {
+        Instantiate(particle, pos, Quaternion.identity);
+    }
 
     public float GetAnimLength(Animator animator, string animName)
     {

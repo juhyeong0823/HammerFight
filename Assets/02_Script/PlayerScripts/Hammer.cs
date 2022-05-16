@@ -4,8 +4,19 @@ using UnityEngine;
 
 public class Hammer : MonoBehaviour
 {
-    private float attackPower = 30; // 얼마나 멀리 날릴지,
+    public enum AttackState
+    {
+        swing,
+        upperSwing
+    };
+
+    public Player player;
+
+
+    public AttackState state = AttackState.swing;
+    private float attackPower = 10; // 얼마나 멀리 날릴지,
     [SerializeField] private Transform centerOfHammer;
+
 
     private void OnTriggerEnter(Collider col)
     {
@@ -15,8 +26,16 @@ public class Hammer : MonoBehaviour
                 col.gameObject.transform.position.y - centerOfHammer.position.y,
                 col.gameObject.transform.position.z - centerOfHammer.position.z);
 
-            dir = (dir * attackPower) + transform.root.GetComponent<Rigidbody>().velocity; // 내 이동속도와, 망치 무게느낌의 힘
+            if (state == AttackState.swing)
+            {
+                dir = Vector3.zero; // 맞으면 멈추게
+            }
+            else if (state == AttackState.upperSwing)
+            {
+                dir = (dir * attackPower * player.upperPower) + player.rigid.velocity; // 내 이동속도와, 망치 무게느낌의 힘
+            }
             Client.instance.HittedSend(col.gameObject.name, dir);
         }
     }
+
 }
